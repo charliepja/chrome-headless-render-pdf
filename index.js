@@ -41,6 +41,14 @@ class RenderPDF {
         })
     }
 
+    /*
+    *
+    * Adds the options:
+    * requiredElement - will wait until this element is present
+    * takeScreenshot - will take a screenshot of the page rather than a PDF
+    * 
+    */
+
     setOptions(options) {
         this.options = {
             printLogs: def('printLogs', false),
@@ -61,6 +69,8 @@ class RenderPDF {
             footerTemplate: def('footerTemplate', undefined),
             jsTimeBudget: def('jsTimeBudget', 5000),
             animationTimeBudget: def('animationTimeBudget', 5000),
+            requiredElement: def('requiredElement', undefined),
+            takeScreenshot: def('takeScreenshot', false),
         };
 
         this.commandLineOptions = {
@@ -115,9 +125,10 @@ class RenderPDF {
     async renderPdf(url, options) {
         const client = await CDP({host: this.host, port: this.port});
         this.log(`Opening ${url}`);
-        const {Page, Emulation, LayerTree} = client;
+        const {Page, Emulation, LayerTree, DOM} = client;
         await Page.enable();
         await LayerTree.enable();
+        await DOM.enable();
 
         const loaded = this.cbToPromise(Page.loadEventFired);
         const jsDone = this.cbToPromise(Emulation.virtualTimeBudgetExpired);
@@ -144,8 +155,34 @@ class RenderPDF {
             });
         });
 
-        const pdf = await Page.printToPDF(options);
-        const buff = Buffer.from(pdf.data, 'base64');
+        if(this.options.requiredElement) {
+            await this.profileScope('Wait for required HTML element', async () => {
+                await new Promise(async (resolve) => {
+                    const startTime = Date.now();
+                    const intervalId = setInterval(async () => {
+                        const document = await DOM.getDocument();
+                        const element = await DOM.querySelector({ selector: this.options.requiredElement, nodeId: document.root.nodeId });
+                        if(element) {
+                            clearInterval(intervalId);
+                            resolve(element);
+                        } else if (Date.now() - startTime > 10000) {
+                            clearInterval(intervalId);
+                            reject(new Error(`Element ${this.options.requiredElement} not found within 10000 ms`));
+                        }
+                    }, 1000);
+                });
+            });
+        }
+
+        let buff;
+        if(this.options.takeScreenshot) {
+            const img = Page.captureScreenshot({format: 'png'});
+            buff = Buffer.from(img.data, 'base64');
+        } else {
+            const pdf = await Page.printToPDF(options);
+            buff = Buffer.from(pdf.data, 'base64');
+        }
+
         client.close();
         return buff;
     }
