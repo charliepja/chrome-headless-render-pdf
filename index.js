@@ -45,7 +45,6 @@ class RenderPDF {
     *
     * Adds the options:
     * requiredElement - will wait until this element is present
-    * takeScreenshot - will take a screenshot of the page rather than a PDF
     * 
     */
 
@@ -70,7 +69,6 @@ class RenderPDF {
             jsTimeBudget: def('jsTimeBudget', 5000),
             animationTimeBudget: def('animationTimeBudget', 5000),
             requiredElement: def('requiredElement', undefined),
-            takeScreenshot: def('takeScreenshot', false),
         };
 
         this.commandLineOptions = {
@@ -174,14 +172,8 @@ class RenderPDF {
             });
         }
 
-        let buff;
-        if(this.options.takeScreenshot) {
-            const img = Page.captureScreenshot({format: 'png'});
-            buff = Buffer.from(img.data, 'base64');
-        } else {
-            const pdf = await Page.printToPDF(options);
-            buff = Buffer.from(pdf.data, 'base64');
-        }
+        const pdf = await Page.printToPDF(options);
+        const buff = Buffer.from(pdf.data, 'base64');
 
         client.close();
         return buff;

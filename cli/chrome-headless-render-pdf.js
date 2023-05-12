@@ -35,7 +35,6 @@ const argv = require('minimist')(process.argv.slice(2), {
         'include-background',
         'landscape',
         'display-header-footer',
-        'take-screenshot',
     ]
 });
 
@@ -162,11 +161,6 @@ if(typeof argv['required-element'] === 'string') {
     requiredElement = argv['required-element'];
 }
 
-let takeScreenshot;
-if(typeof argv['take-screenshot']) {
-    takeScreenshot = argv['take-screenshot'];
-}
-
 (async () => {
     try {
         const jobs = generateJobList(urls, pdfs);
@@ -190,7 +184,6 @@ if(typeof argv['take-screenshot']) {
             jsTimeBudget,
             animationTimeBudget,
             requiredElement,
-            takeScreenshot,
         });
     } catch (e) {
         console.error(e);
@@ -235,7 +228,6 @@ function printHelp() {
     console.log('    --js-time-budget         Virtual time budget in ms to wait for js execution (default 5000)');
     console.log('    --animation-time-budget  Time budget in ms to wait for in progress animations to finish (default 5000)');
     console.log('    --required-element       HTML element to wait for');
-    console.log('    --take-screenshot        Take a screenshot of the page rather than generate PDF')
     console.log('');
     console.log('  Example:');
     console.log('    Render single pdf file');
